@@ -14,16 +14,174 @@
       overflow: hidden;
       background: #000;
     }
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      background: #000;
+      color: #f5f5f5;
+      font-family: system-ui, -apple-system, sans-serif;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    #loader.done {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(255, 255, 255, 0.15);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loader-text {
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      opacity: 0.9;
+    }
+    .progress-wrap {
+      width: min(240px, 70vw);
+      height: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #fff;
+      border-radius: 2px;
+      transition: width 0.15s ease;
+    }
+    .progress-pct {
+      font-size: 0.8rem;
+      opacity: 0.55;
+      font-variant-numeric: tabular-nums;
+    }
     #viewer {
       position: fixed;
       inset: 0;
       width: 100%;
       height: 100%;
       border: none;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #viewer.ready {
+      opacity: 1;
     }
   </style>
 </head>
 <body>
-  <embed id="viewer" src="menu.pdf#view=FitH&toolbar=0&navpanes=0" type="application/pdf" />
+  <div id="loader" aria-live="polite" aria-busy="true">
+    <div class="spinner" aria-hidden="true"></div>
+    <p class="loader-text">Loading menu…</p>
+    <div class="progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressbar">
+      <div class="progress-bar" id="progress"></div>
+    </div>
+    <p class="progress-pct" id="pct">0%</p>
+  </div>
+
+  <embed id="viewer" type="application/pdf" title="Sip N Dine Menu" />
+
+  <script>
+    const PDF_URL = 'menu.pdf';
+    const PDF_HASH = '#view=FitH&toolbar=0&navpanes=0';
+
+    const loader = document.getElementById('loader');
+    const progress = document.getElementById('progress');
+    const pctEl = document.getElementById('pct');
+    const progressbar = document.getElementById('progressbar');
+    const viewer = document.getElementById('viewer');
+
+    let blobUrl = null;
+
+    function setProgress(percent) {
+      const p = Math.min(100, Math.round(percent));
+      progress.style.width = p + '%';
+      pctEl.textContent = p + '%';
+      progressbar.setAttribute('aria-valuenow', String(p));
+    }
+
+    function hideLoader() {
+      loader.classList.add('done');
+      loader.setAttribute('aria-busy', 'false');
+      viewer.classList.add('ready');
+    }
+
+    async function fetchPdf() {
+      const res = await fetch(PDF_URL);
+      if (!res.ok) throw new Error('Could not load menu');
+
+      const total = Number(res.headers.get('content-length')) || 0;
+      const reader = res.body.getReader();
+      const chunks = [];
+      let loaded = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        if (total > 0) {
+          setProgress((loaded / total) * 100);
+        } else {
+          setProgress(Math.min(95, loaded / 250000));
+        }
+      }
+
+      setProgress(100);
+      const blob = new Blob(chunks, { type: 'application/pdf' });
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      blobUrl = URL.createObjectURL(blob);
+      return blobUrl;
+    }
+
+    function showPdf(url) {
+      viewer.src = url + PDF_HASH;
+      viewer.addEventListener('load', hideLoader, { once: true });
+      setTimeout(hideLoader, 800);
+    }
+
+    function startLoad() {
+      fetchPdf()
+        .then(showPdf)
+        .catch(function () {
+          pctEl.textContent = 'Tap to retry';
+          loader.querySelector('.loader-text').textContent = 'Could not load menu';
+          loader.style.cursor = 'pointer';
+          loader.onclick = function () {
+            loader.onclick = null;
+            loader.style.cursor = '';
+            loader.querySelector('.loader-text').textContent = 'Loading menu…';
+            pctEl.textContent = '0%';
+            setProgress(0);
+            startLoad();
+          };
+        });
+    }
+
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(startLoad, { timeout: 2000 });
+    } else {
+      window.addEventListener('DOMContentLoaded', function () {
+        setTimeout(startLoad, 100);
+      });
+    }
+
+    window.addEventListener('pagehide', function () {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    });
+  </script>
 </body>
 </html>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#ffffff">
   <title>Sip N Dine Menu</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -23,8 +23,8 @@
       align-items: center;
       justify-content: center;
       gap: 1.25rem;
-      background: #000;
-      color: #f5f5f5;
+      background: #ffffff;
+      color: #1a1a1a;
       font-family: system-ui, -apple-system, sans-serif;
       transition: opacity 0.4s ease, visibility 0.4s ease;
     }
@@ -36,8 +36,8 @@
     .spinner {
       width: 44px;
       height: 44px;
-      border: 3px solid rgba(255, 255, 255, 0.15);
-      border-top-color: #fff;
+      border: 3px solid rgba(0, 0, 0, 0.08);
+      border-top-color: #1a1a1a;
       border-radius: 50%;
       animation: spin 0.85s linear infinite;
     }
@@ -47,25 +47,25 @@
     .loader-text {
       font-size: 0.95rem;
       letter-spacing: 0.04em;
-      opacity: 0.9;
+      color: #333;
     }
     .progress-wrap {
       width: min(240px, 70vw);
       height: 4px;
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.08);
       border-radius: 2px;
       overflow: hidden;
     }
     .progress-bar {
       height: 100%;
       width: 0%;
-      background: #fff;
+      background: #1a1a1a;
       border-radius: 2px;
       transition: width 0.15s ease;
     }
     .progress-pct {
       font-size: 0.8rem;
-      opacity: 0.55;
+      color: #666;
       font-variant-numeric: tabular-nums;
     }
     #viewer {
